@@ -1,8 +1,10 @@
 package com.android.converter.ui
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.converter.data.model.Currency
 import com.android.converter.repository.CurrencyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -54,5 +56,45 @@ class AppViewModel @Inject constructor(
             delay(1000L - timeElapsed)
 
         state.update { it.copy(refreshing = false) }
+    }
+
+    // Update the specified currency
+    fun setCurrency(type: String, currency: Currency) {
+        val currentState = state.value
+
+        // If both currencies would end up being the same, swap them instead
+        val otherCurrency = when (type) {
+            "from" -> currentState.fromCurrency
+            else -> currentState.toCurrency
+        }
+
+        if (currency == otherCurrency)
+            return swapCurrencies()
+
+        state.update { when (type) {
+            "from" -> it.copy(fromCurrency = currency)
+            else -> it.copy(toCurrency = currency)
+        } }
+
+        saveCurrencyPreferences()
+    }
+
+    // Swap the selected currencies and amounts
+    fun swapCurrencies() {
+        val currentState = state.value
+
+        state.update { it.copy(
+            fromCurrency = currentState.toCurrency,
+            toCurrency = currentState.fromCurrency,
+            fromAmount = currentState.toAmount
+        ) }
+
+        saveCurrencyPreferences()
+    }
+
+    // Save the selected currency pair to the preferences
+    private fun saveCurrencyPreferences() = sharedPreferences.edit {
+        putString("from-currency", state.value.fromCurrency!!.code)
+        putString("to-currency", state.value.toCurrency!!.code)
     }
 }

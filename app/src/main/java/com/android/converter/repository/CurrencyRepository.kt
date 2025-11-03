@@ -18,13 +18,14 @@ class CurrencyRepository(
     private val currencyDao: CurrencyDao,
     private val exchangeRatesService: ExchangeRatesService
 ) {
-    fun getCurrencies() = currencyDao.getCurrencies()
-
     // Init the database when the user opens the app for the first time
     suspend fun init() {
         if (currencyDao.getCurrencies().first().isEmpty())
             currencyDao.upsertAll(loadDefaultCurrencyData())
     }
+
+    // Get all currencies in the database
+    fun getCurrencies() = currencyDao.getCurrencies()
 
     // Fetch current exchange rates if the last update was more than an
     // hour ago
