@@ -20,13 +20,15 @@ class CurrencyRepository(
 ) {
     fun getCurrencies() = currencyDao.getCurrencies()
 
-    suspend fun refreshCurrencies(): Boolean {
-        // Init the database when the user opens the app for the first time
+    // Init the database when the user opens the app for the first time
+    suspend fun init() {
         if (currencyDao.getCurrencies().first().isEmpty())
             currencyDao.upsertAll(loadDefaultCurrencyData())
+    }
 
-        // Fetch current exchange rates if the last update was more than an
-        // hour ago
+    // Fetch current exchange rates if the last update was more than an
+    // hour ago
+    suspend fun refreshCurrencies(): Boolean {
         val lastUpdate = sharedPreferences.getLong("last-update", 0)
 
         if (System.currentTimeMillis() - lastUpdate < 3600000L)
