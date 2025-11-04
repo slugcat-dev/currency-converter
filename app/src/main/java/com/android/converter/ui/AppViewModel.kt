@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
 
@@ -58,21 +59,26 @@ class AppViewModel @Inject constructor(
         state.update { it.copy(refreshing = false) }
     }
 
+    // Set the locale used for number formatting
+    fun setLocale(locale: Locale) {
+        state.update { it.copy(locale = locale) }
+    }
+
     // Update the specified currency
     fun setCurrency(type: String, currency: Currency) {
-        val currentState = state.value
+        val from = type == "from"
 
-        // If both currencies would end up being the same, swap them instead
-        val otherCurrency = when (type) {
-            "from" -> currentState.fromCurrency
-            else -> currentState.toCurrency
+        val otherCurrency = when {
+            from -> state.value.fromCurrency
+            else -> state.value.toCurrency
         }
 
+        // If both currencies would end up being the same, swap them instead
         if (currency == otherCurrency)
             return swapCurrencies()
 
-        state.update { when (type) {
-            "from" -> it.copy(fromCurrency = currency)
+        state.update { when {
+            from -> it.copy(fromCurrency = currency)
             else -> it.copy(toCurrency = currency)
         } }
 

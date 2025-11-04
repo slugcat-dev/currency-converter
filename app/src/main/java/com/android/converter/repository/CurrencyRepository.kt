@@ -70,7 +70,7 @@ class CurrencyRepository(
                 code = currency.code,
                 name = currency.name,
                 icon = currency.icon,
-                rate = rates[currency.code] ?: 0.0,
+                rate = rates[currency.code] ?: 1.0,
                 decimals = currency.decimals
             )
         }
