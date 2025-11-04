@@ -1,6 +1,7 @@
 package com.android.converter.ui
 
 import android.content.SharedPreferences
+import android.icu.text.NumberFormat
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -83,6 +84,7 @@ class AppViewModel @Inject constructor(
         } }
 
         saveCurrencyPreferences()
+        convert()
     }
 
     // Swap the selected currencies and amounts
@@ -96,11 +98,39 @@ class AppViewModel @Inject constructor(
         ) }
 
         saveCurrencyPreferences()
+        convert()
     }
 
     // Save the selected currency pair to the preferences
     private fun saveCurrencyPreferences() = sharedPreferences.edit {
         putString("from-currency", state.value.fromCurrency!!.code)
         putString("to-currency", state.value.toCurrency!!.code)
+    }
+
+    // Convert the entered amount with the conversion rate of the currency pair
+    private fun convert() {
+        val fromCurrency = requireNotNull(state.value.fromCurrency)
+        val toCurrency = requireNotNull(state.value.toCurrency)
+        val fromAmount = state.value.fromAmount
+
+        if (fromCurrency.rate == 0.0)
+            throw IllegalStateException("Rate may not be zero")
+
+        val number = NumberFormat.getNumberInstance(state.value.locale)
+
+        // Calculate the conversion rate of the selected currency pair
+        val rate = toCurrency.rate / fromCurrency.rate
+
+        // Convert the entered amount
+        val fromAmountValue = number.parse(fromAmount).toDouble()
+        val toAmountValue = fromAmountValue * rate
+
+        // Drop the decimals if the amount is more than one thousand
+        number.setMaximumFractionDigits(if (toAmountValue < 1000) toCurrency.decimals else 0)
+
+        // Update the state with the formatted value
+        state.update { it.copy(
+            toAmount = number.format(toAmountValue)
+        ) }
     }
 }
