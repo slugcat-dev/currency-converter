@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.DecimalFormatSymbols
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
@@ -84,7 +85,7 @@ class AppViewModel @Inject constructor(
         } }
 
         saveCurrencyPreferences()
-        convert()
+        convertToAmount()
     }
 
     // Swap the selected currencies and amounts
@@ -98,7 +99,7 @@ class AppViewModel @Inject constructor(
         ) }
 
         saveCurrencyPreferences()
-        convert()
+        convertToAmount()
     }
 
     // Save the selected currency pair to the preferences
@@ -107,8 +108,74 @@ class AppViewModel @Inject constructor(
         putString("to-currency", state.value.toCurrency!!.code)
     }
 
+    // Handle keyboard input to update the entered amount
+    fun onKeyPress(key: String) {
+        val fromCurrency = requireNotNull(state.value.fromCurrency)
+        val fromAmount = state.value.fromAmount
+
+        val formatSymbols = DecimalFormatSymbols.getInstance(state.value.locale)
+        val decimalSeparator = formatSymbols.decimalSeparator
+
+        val decKeyAllowed = fromCurrency.decimals > 0 && !fromAmount.contains(decimalSeparator)
+
+        val updatedAmount = when (key) {
+            "<" -> fromAmount.dropLast(1)
+            "C" -> "0"
+
+            else -> when {
+                key == "." && decKeyAllowed -> fromAmount + decimalSeparator
+
+                fromAmount.contains(decimalSeparator) -> {
+                    val decPart = fromAmount.substringAfter(decimalSeparator)
+
+                    if (decPart.length < fromCurrency.decimals)
+                        fromAmount + key
+                    else
+                        fromAmount
+                }
+
+                fromAmount == "0" -> key
+                fromAmount.length < 15 -> fromAmount + key
+                else -> fromAmount
+            }
+        }
+
+        state.update { it.copy(
+            fromAmount = formatFromAmount(updatedAmount, decimalSeparator)
+        ) }
+
+        convertToAmount()
+    }
+
+    // Format the entered amount to include grouping separators
+    private fun formatFromAmount(fromAmount: String, decimalSeparator: Char): String {
+        if (fromAmount.isEmpty())
+            return "0"
+
+        val intPart = fromAmount.substringBefore(decimalSeparator)
+        val decPart = fromAmount.substringAfter(decimalSeparator)
+
+        // Format the integer part
+        val numberFormat = NumberFormat.getNumberInstance(state.value.locale)
+
+        val intValue = numberFormat.parse(intPart).toLong()
+        val formattedIntPart = numberFormat.format(intValue)
+
+        // Reassemble the parts into the final value
+        val hasDecimalSeparator = fromAmount.contains(decimalSeparator)
+
+        return buildString {
+            append(formattedIntPart)
+
+            if (hasDecimalSeparator) {
+                append(decimalSeparator)
+                append(decPart)
+            }
+        }
+    }
+
     // Convert the entered amount with the conversion rate of the currency pair
-    private fun convert() {
+    private fun convertToAmount() {
         val fromCurrency = requireNotNull(state.value.fromCurrency)
         val toCurrency = requireNotNull(state.value.toCurrency)
         val fromAmount = state.value.fromAmount
@@ -116,21 +183,21 @@ class AppViewModel @Inject constructor(
         if (fromCurrency.rate == 0.0)
             throw IllegalStateException("Rate may not be zero")
 
-        val number = NumberFormat.getNumberInstance(state.value.locale)
-
         // Calculate the conversion rate of the selected currency pair
         val rate = toCurrency.rate / fromCurrency.rate
 
         // Convert the entered amount
-        val fromAmountValue = number.parse(fromAmount).toDouble()
+        val numberFormat = NumberFormat.getNumberInstance(state.value.locale)
+
+        val fromAmountValue = numberFormat.parse(fromAmount).toDouble()
         val toAmountValue = fromAmountValue * rate
 
         // Drop the decimals if the amount is more than one thousand
-        number.setMaximumFractionDigits(if (toAmountValue < 1000) toCurrency.decimals else 0)
+        numberFormat.setMaximumFractionDigits(if (toAmountValue < 1000) toCurrency.decimals else 0)
 
         // Update the state with the formatted value
         state.update { it.copy(
-            toAmount = number.format(toAmountValue)
+            toAmount = numberFormat.format(toAmountValue)
         ) }
     }
 }
