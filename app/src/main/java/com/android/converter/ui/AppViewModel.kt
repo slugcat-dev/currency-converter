@@ -108,7 +108,7 @@ class AppViewModel @Inject constructor(
         putString("to-currency", state.value.toCurrency!!.code)
     }
 
-    // Handle keyboard input to update the entered amount
+    // Handle keyboard input
     fun onKeyPress(key: String) {
         val fromCurrency = requireNotNull(state.value.fromCurrency)
         val fromAmount = state.value.fromAmount
@@ -116,30 +116,38 @@ class AppViewModel @Inject constructor(
         val formatSymbols = DecimalFormatSymbols.getInstance(state.value.locale)
         val decimalSeparator = formatSymbols.decimalSeparator
 
-        val decKeyAllowed = fromCurrency.decimals > 0 && !fromAmount.contains(decimalSeparator)
+        val intPart = fromAmount.substringBefore(decimalSeparator)
+        val decPart = fromAmount.substringAfter(decimalSeparator)
+        val hasDecSeparator = fromAmount.contains(decimalSeparator)
 
-        val updatedAmount = when (key) {
-            "<" -> fromAmount.dropLast(1)
-            "C" -> "0"
+        val separatorAllowed = !hasDecSeparator && fromCurrency.decimals > 0
 
-            else -> when {
-                key == "." && decKeyAllowed -> fromAmount + decimalSeparator
-
-                fromAmount.contains(decimalSeparator) -> {
-                    val decPart = fromAmount.substringAfter(decimalSeparator)
-
-                    if (decPart.length < fromCurrency.decimals)
-                        fromAmount + key
-                    else
-                        fromAmount
-                }
-
-                fromAmount == "0" -> key
-                fromAmount.length < 15 -> fromAmount + key
-                else -> fromAmount
-            }
+        val digitAllowed = when {
+            hasDecSeparator -> decPart.length < fromCurrency.decimals
+            else -> intPart.length < 15
         }
 
+        // Update the amount based on the pressed key
+        val updatedAmount = when {
+            // Backspace
+            key == "C" -> "0"
+            key == "<" -> fromAmount.dropLast(1)
+
+            // Separator
+            key == "." -> {
+                if (separatorAllowed) fromAmount + decimalSeparator
+                else fromAmount
+            }
+
+            // Digits
+            fromAmount == "0" -> key
+            digitAllowed -> fromAmount + key
+
+            // Key not allowed
+            else -> fromAmount
+        }
+
+        // Update the state with the formatted amount
         state.update { it.copy(
             fromAmount = formatFromAmount(updatedAmount, decimalSeparator)
         ) }
@@ -154,6 +162,7 @@ class AppViewModel @Inject constructor(
 
         val intPart = fromAmount.substringBefore(decimalSeparator)
         val decPart = fromAmount.substringAfter(decimalSeparator)
+        val hasDecSeparator = fromAmount.contains(decimalSeparator)
 
         // Format the integer part
         val numberFormat = NumberFormat.getNumberInstance(state.value.locale)
@@ -162,12 +171,10 @@ class AppViewModel @Inject constructor(
         val formattedIntPart = numberFormat.format(intValue)
 
         // Reassemble the parts into the final value
-        val hasDecimalSeparator = fromAmount.contains(decimalSeparator)
-
         return buildString {
             append(formattedIntPart)
 
-            if (hasDecimalSeparator) {
+            if (hasDecSeparator) {
                 append(decimalSeparator)
                 append(decPart)
             }
@@ -195,7 +202,7 @@ class AppViewModel @Inject constructor(
         // Drop the decimals if the amount is more than one thousand
         numberFormat.setMaximumFractionDigits(if (toAmountValue < 1000) toCurrency.decimals else 0)
 
-        // Update the state with the formatted value
+        // Update the state with the formatted amount
         state.update { it.copy(
             toAmount = numberFormat.format(toAmountValue)
         ) }
