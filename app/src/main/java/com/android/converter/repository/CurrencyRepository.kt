@@ -7,6 +7,7 @@ import com.android.converter.Utils.json
 import com.android.converter.Utils.readAsset
 import com.android.converter.data.database.CurrencyDao
 import com.android.converter.data.model.Currency
+import com.android.converter.data.model.CurrencyInfo
 import com.android.converter.data.network.ExchangeRatesResponse
 import com.android.converter.data.network.ExchangeRatesService
 import kotlinx.coroutines.flow.first
@@ -56,9 +57,6 @@ class CurrencyRepository(
 
     // Load the currency list and exchange rates from the asset directory
     private fun loadDefaultCurrencyData(): List<Currency> {
-        @Serializable
-        data class CurrencyInfo(val code: String, val name: String, val icon: String, val decimals: Int)
-
         val currenciesJson = readAsset(context, "currencies.json")
         val ratesJson = readAsset(context, "rates.json")
 
@@ -69,9 +67,10 @@ class CurrencyRepository(
             Currency(
                 code = currency.code,
                 name = currency.name,
+                category = currency.category,
                 icon = currency.icon,
-                rate = rates[currency.code] ?: 1.0,
-                decimals = currency.decimals
+                decimals = currency.decimals,
+                rate = rates[currency.code] ?: 1.0
             )
         }
     }

@@ -1,17 +1,12 @@
 package com.android.converter.data.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 @Serializable
-@Entity(tableName = "currencies")
-data class Currency (
-    @PrimaryKey
+data class CurrencyInfo(
     val code: String,
     val name: String,
     val category: String,
     val icon: String,
-    val decimals: Int,
-    val rate: Double
+    val decimals: Int
 )
