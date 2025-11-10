@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
-                Surface(Modifier.fillMaxSize()) {
+                Surface(modifier = Modifier.fillMaxSize()) {
                     AppNavHost(viewModel)
                 }
             }

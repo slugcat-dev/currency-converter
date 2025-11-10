@@ -16,8 +16,8 @@ import com.android.converter.ui.screens.CurrencySelectionScreen
 @Composable
 fun AppNavHost(viewModel: AppViewModel) {
     // Let the view model access the app locale
-    val configuration = LocalConfiguration.current
-    val locale = configuration.locales[0]
+    val config = LocalConfiguration.current
+    val locale = config.locales[0]
 
     LaunchedEffect(locale) {
         viewModel.setLocale(locale)
