@@ -129,7 +129,7 @@ fun CurrencyRow(
                 contentAlignment = Alignment.CenterEnd
             ) {
                 BasicText(
-                    text  = amount,
+                    text = amount,
                     style = TextStyle(
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
